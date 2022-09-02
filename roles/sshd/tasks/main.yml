@@ -1,0 +1,67 @@
+- name: Registering default port (22)
+  set_fact: ansible_port=22
+  when: ansible_port is undefined
+- name: Registering default user (ansible)
+  set_fact: ansible_user=ansible
+  when: ansible_user is undefined
+- name: Registering sshd_port
+  set_fact: sshd_port={{ ansible_port }}
+
+- name: Test if non default port is available
+  local_action: shell nc -z -w5 {{ ansible_host }} {{ ansible_port }}
+  register: result
+  failed_when: false|bool
+  changed_when: result.rc!=0
+  when: ansible_port|int !=22
+- name: Switching to default port
+  set_fact: ansible_port=22
+  when: result is changed
+
+- name: Test if ansible user exists and has privileged access
+  local_action: shell ssh -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=5 -p {{ ansible_port }} -i ~/.ansible/id_rsa ansible@{{ ansible_host }} sudo -n true
+  register: result
+  failed_when: false|bool
+  changed_when: result.rc!=0
+  when: ansible_user!="ansible"
+
+- name: Create ansible user
+  user: name=ansible system=yes password="*" update_password=always groups=sudo append=yes shell="/bin/bash"
+  become: yes
+  when: result is changed
+
+- name: Deploy authorized key for ansible user
+  authorized_key: user=ansible key="{{ lookup('file', '~/.ansible/id_rsa.pub') }}"
+  become: yes
+  when: result is changed
+
+- name: Add ansible user to sudoers
+  lineinfile: "dest=/etc/sudoers regexp=\"ansible ALL\" line=\"ansible ALL=(ALL:ALL) NOPASSWD: ALL\" state=present"
+  become: yes
+  when: result is changed
+
+- name: Switch to ansible user
+  set_fact:
+    ansible_user: "ansible"
+    ansible_become_method: "sudo"
+    ansible_ssh_private_key_file: ~/.ansible/id_rsa
+
+- include_role:
+    name: iptables
+  vars:
+    tcp_allow:
+      - "{{ sshd_port }}"  
+
+- name: Setup sshd
+  template: src=sshd_config.j2 dest=/etc/ssh/sshd_config owner=root group=root mode=0644
+  become: yes
+  register: result
+
+- name: Restart sshd
+  service: name=sshd state=restarted
+  become: yes
+  when: result is changed
+
+- name: Switch to non default port ({{ sshd_port }})
+  set_fact: ansible_port={{ sshd_port }}
+  when: ansible_port != sshd_port
+

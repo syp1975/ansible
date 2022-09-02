@@ -1,0 +1,68 @@
+- name: Install iptables
+  package:
+    name: iptables
+    state: present
+  become: yes
+  when: firewall_flush|default(true)|bool
+
+- name: Flush firewall rules
+  iptables:
+    flush: yes
+  become: yes
+  when: firewall_flush|default(true)|bool
+  notify:
+  - Drop all incoming
+  - Save iptables
+
+- name: Allow stablished incomming connections
+  iptables:
+    chain: INPUT
+    match: conntrack
+    ctstate: ESTABLISHED
+    jump: ACCEPT
+  become: yes
+  when: firewall_flush|default(true)|bool
+
+- name: Allow incoming pings (ICMP echo-request)
+  iptables:
+    chain: INPUT
+    protocol: icmp
+    icmp_type: echo-request
+    jump: ACCEPT
+  become: yes
+  when: firewall_flush|default(true)|bool
+
+- name: Allow loopback interface connections
+  iptables:
+    chain: INPUT
+    in_interface: lo
+    jump: ACCEPT
+  become: yes
+  when: firewall_flush|default(true)|bool
+
+- set_fact: firewall_flush=false
+  
+- name: Allow tcp incoming connections
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "{{ item }}"
+    match: conntrack
+    ctstate: NEW
+    jump: ACCEPT
+  become: yes
+  loop: "{{ tcp_allow }}"
+  when: tcp_allow is defined
+
+- name: Allow udp incoming connections
+  iptables:
+    chain: INPUT
+    protocol: udp
+    destination_port: "{{ item }}"
+    match: conntrack
+    ctstate: NEW
+    jump: ACCEPT
+  become: yes
+  loop: "{{ udp_allow }}"
+  when: udp_allow is defined
+

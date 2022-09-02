@@ -1,0 +1,12 @@
+- name: Drop all incoming
+  iptables:
+    chain: INPUT
+    jump: DROP
+  become: yes
+  
+- name: Save iptables
+  community.general.iptables_state:
+    state: saved
+    path: /etc/iptables/rules.v4
+  become: yes
+

@@ -1,0 +1,6 @@
+- name: Setup ssh connection
+  hosts: frt.duckdns.org
+  gather_facts: false
+  roles:
+    - sshd
+
