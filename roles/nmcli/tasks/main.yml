@@ -1,0 +1,17 @@
+- name: Set static IP address on ethernet
+  community.general.nmcli:
+    conn_name: ethernet
+    ifname: "{{ nmcli_if|default('*') }}"
+    type: ethernet
+    ip4: "{{ nmcli_ip4 }}"
+    gw4: "{{ nmcli_gw4|default(omit) }}"
+    dns4: "{{ nmcli_dns4|default(omit) }}"
+    state: present
+    autoconnect: yes
+  when: nmcli_ip4 is present
+
+- name: Set hostname
+  hostname:
+    name: {{ hostname }}
+  when: hostname is defined
+

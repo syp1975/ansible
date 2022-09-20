@@ -52,6 +52,8 @@
     jump: ACCEPT
   become: yes
   loop: "{{ tcp_allow }}"
+  loop_control:
+    label: "Port {{ item }}"
   when: tcp_allow is defined
 
 - name: Allow udp incoming connections
@@ -64,5 +66,7 @@
     jump: ACCEPT
   become: yes
   loop: "{{ udp_allow }}"
+  loop_control:
+    label: "Port {{ item }}"
   when: udp_allow is defined
 

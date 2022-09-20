@@ -1,6 +1,14 @@
-- name: Setup ssh connection
+- name: Bootstrap server
   hosts: frt.duckdns.org
-  gather_facts: false
   roles:
+    - role: packages
+      vars:
+        packages_uninstall:
+          - ufw
+          - smartmontools
+          - wpasupplicant
+        packages_install:
+          - iptables
+          - iptables-persistent
     - sshd
 

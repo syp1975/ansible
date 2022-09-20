@@ -1,0 +1,26 @@
+- name: Upgrade packages
+  apt:
+    update_cache: yes
+    upgrade: yes
+
+- name: Uninstall packages
+  apt:
+    name: "{{ packages_uninstall }}"
+    state: absent
+  when: packages_uninstall is defined
+
+- name: Install packages
+  apt:
+    name: "{{ packages_install }}"
+    state: present
+  when: packages_install is defined
+
+- name: Uninstall unused packages
+  apt:
+    autoremove: yes
+    purge: yes
+
+- name: Clean downloaded packages
+  apt:
+    clean: yes
+
